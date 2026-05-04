@@ -423,8 +423,17 @@ Terms that must be avoided in repo-owned terminology for this effort:
 
 Downstream work must read these primary sources line by line where relevant:
 
+- workspace technological-context checkout for `FileIO`: `/home/jeetsukumaran/site/storage/local/00_resources/codebases-and-documentation/fileio.jl`
+- workspace technological-context checkout for `MetaGraphsNext.jl`: `/home/jeetsukumaran/site/storage/local/00_resources/codebases-and-documentation/MetaGraphsNext.jl`
+- workspace technological-context checkout for `PhyloNetworks.jl`: `/home/jeetsukumaran/site/storage/local/00_resources/codebases-and-documentation/PhyloNetworks.jl`
 - upstream `FileIO` entrypoint contract: `/home/jeetsukumaran/.julia/packages/FileIO/ZlWq2/src/FileIO.jl`
 - upstream `FileIO` load dispatch path: `/home/jeetsukumaran/.julia/packages/FileIO/ZlWq2/src/loadsave.jl`
+
+Mandated review obligations for these technological-context checkouts:
+
+- any tranche, task, implementation, review, or audit that touches the public `FileIO.load(...)` compatibility boundary, typed direct-load surfaces, or compatibility-wrapper ownership must review the relevant `FileIO` checkout sources line by line before proceeding
+- any tranche, task, implementation, review, or audit that touches `ext/MetaGraphsNextIO.jl` or any shared typed-surface contract intended to support graph-owned construction handles must review the relevant `MetaGraphsNext.jl` checkout sources and docs line by line before proceeding
+- any tranche, task, implementation, review, or audit that touches `ext/PhyloNetworksIO.jl` or any shared multi-parent typed-surface contract intended to support rooted-network construction handles must review the relevant `PhyloNetworks.jl` checkout sources and docs line by line before proceeding
 
 Project-owned primary sources that constrain the redesign:
 
