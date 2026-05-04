@@ -394,7 +394,7 @@ Those behaviors belong either:
 
 ## Governance and controlled vocabulary
 
-Downstream contributors must read the following governance documents line by line before planning, trancheing, tasking, implementing, reviewing, or delegating this work:
+Downstream contributors and agents must read the following governance documents line by line and comply with them before planning, trancheing, tasking, implementing, reviewing, auditing, or delegating this work:
 
 - `CONTRIBUTING.md`
 - `STYLE-architecture.md`
@@ -406,6 +406,25 @@ Downstream contributors must read the following governance documents line by lin
 - `STYLE-vocabulary.md`
 - `STYLE-workflow-docs.md`
 - `STYLE-writing.md`
+
+This is an execution precondition, not a documentation suggestion.
+No downstream workflow artifact, task description, implementation prompt, review scope, audit scope, or agent handoff may replace that reading-and-compliance obligation with:
+
+- a summary
+- a parent-document link
+- a claim that the reader is already generally familiar with the repo rules
+- or a statement that the files were merely "considered"
+
+Every downstream artifact generated from this PRD must restate and pass forward 2 distinct obligations explicitly:
+
+- governance documents must be read line by line and complied with before proceeding
+- upstream and technological-context primary sources required by the specific work must be read line by line and complied with before proceeding
+
+That pass-forward chain is mandatory at every handoff boundary in this effort:
+
+- PRD -> tranche
+- tranche -> tasking
+- tasking -> implementation, review, audit, and delegation instructions
 
 Vocabulary decisions in force for this effort:
 
@@ -421,7 +440,7 @@ Terms that must be avoided in repo-owned terminology for this effort:
 
 ## Primary upstream references
 
-Downstream work must read these primary sources line by line where relevant:
+Downstream work must read the relevant primary sources line by line and comply with the contracts they define before proceeding:
 
 - workspace technological-context checkout for `FileIO`: `/home/jeetsukumaran/site/storage/local/00_resources/codebases-and-documentation/fileio.jl`
 - workspace technological-context checkout for `MetaGraphsNext.jl`: `/home/jeetsukumaran/site/storage/local/00_resources/codebases-and-documentation/MetaGraphsNext.jl`
@@ -429,11 +448,16 @@ Downstream work must read these primary sources line by line where relevant:
 - upstream `FileIO` entrypoint contract: `/home/jeetsukumaran/.julia/packages/FileIO/ZlWq2/src/FileIO.jl`
 - upstream `FileIO` load dispatch path: `/home/jeetsukumaran/.julia/packages/FileIO/ZlWq2/src/loadsave.jl`
 
+For this effort, "read the relevant primary sources" means actual file-level reading of the files that own the behavior being changed.
+Repo-root awareness, module-root awareness, directory listing awareness, summaries, second-hand notes, or inherited mentions from a parent document are not substitutes.
+If a tranche, task, implementation, review, audit, or delegation touches a behavior owned inside one of these upstream checkouts, it must identify the relevant files and require the next contributor or agent to read those files line by line and comply with the contracts they define before proceeding.
+
 Mandated review obligations for these technological-context checkouts:
 
-- any tranche, task, implementation, review, or audit that touches the public `FileIO.load(...)` compatibility boundary, typed direct-load surfaces, or compatibility-wrapper ownership must review the relevant `FileIO` checkout sources line by line before proceeding
-- any tranche, task, implementation, review, or audit that touches `ext/MetaGraphsNextIO.jl` or any shared typed-surface contract intended to support graph-owned construction handles must review the relevant `MetaGraphsNext.jl` checkout sources and docs line by line before proceeding
-- any tranche, task, implementation, review, or audit that touches `ext/PhyloNetworksIO.jl` or any shared multi-parent typed-surface contract intended to support rooted-network construction handles must review the relevant `PhyloNetworks.jl` checkout sources and docs line by line before proceeding
+- any tranche, task, implementation, review, or audit that touches the public `FileIO.load(...)` compatibility boundary, typed direct-load surfaces, or compatibility-wrapper ownership must identify and read the relevant `FileIO` checkout files line by line and comply with the contracts they define before proceeding, and must pass that same file-level reading-and-compliance obligation forward in any generated downstream instructions
+- any tranche, task, implementation, review, or audit that touches `ext/MetaGraphsNextIO.jl` or any shared typed-surface contract intended to support graph-owned construction handles must identify and read the relevant `MetaGraphsNext.jl` checkout files and docs line by line and comply with the contracts they define before proceeding, and must pass that same file-level reading-and-compliance obligation forward in any generated downstream instructions
+- any tranche, task, implementation, review, or audit that touches `ext/PhyloNetworksIO.jl` or any shared multi-parent typed-surface contract intended to support rooted-network construction handles must identify and read the relevant `PhyloNetworks.jl` checkout files and docs line by line and comply with the contracts they define before proceeding, and must pass that same file-level reading-and-compliance obligation forward in any generated downstream instructions
+- extension tranches, extension tasks, extension implementation prompts, extension review scopes, and extension audit scopes must require file-level review inside those checkouts, not just module-root awareness
 
 Project-owned primary sources that constrain the redesign:
 
