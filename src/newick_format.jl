@@ -47,37 +47,7 @@ function build_newick_store(
     )::LineageGraphStore
     basenodes = parse_newick_source(text, source_path)
     graph_assets = [build_graph_asset(basenode, graph_index, source_path) for (graph_index, basenode) in enumerate(basenodes)]
-    graph_assets = materialize_graphs(graph_assets, request)
-    graph_count = length(graph_assets)
-    source_table = SourceTable(
-        source_idx = [1],
-        source_path = [source_path],
-        collection_count = [1],
-        graph_count = [graph_count],
-    )
-    collection_table = CollectionTable(
-        collection_idx = [1],
-        source_idx = [1],
-        collection_label = [nothing],
-        graph_count = [graph_count],
-    )
-    graph_table = GraphTable(
-        index = [graph_asset.index for graph_asset in graph_assets],
-        source_idx = [graph_asset.source_idx for graph_asset in graph_assets],
-        collection_idx = [graph_asset.collection_idx for graph_asset in graph_assets],
-        collection_graph_idx = [graph_asset.collection_graph_idx for graph_asset in graph_assets],
-        collection_label = [graph_asset.collection_label for graph_asset in graph_assets],
-        graph_label = [graph_asset.graph_label for graph_asset in graph_assets],
-        node_count = [lineagetable_nrows(graph_asset.node_table) for graph_asset in graph_assets],
-        edge_count = [lineagetable_nrows(graph_asset.edge_table) for graph_asset in graph_assets],
-    )
-    graphs = GraphAssetIterator(graph_assets)
-    return LineageGraphStore(
-        source_table,
-        collection_table,
-        graph_table,
-        graphs,
-    )
+    return build_store_from_graph_assets(graph_assets, source_path, request)
 end
 
 function build_graph_asset(

@@ -46,37 +46,7 @@ function build_alife_store_from_rows(
         build_alife_graph_asset(component, graph_index, source_path, annotation_names)
             for (graph_index, component) in enumerate(components)
     ]
-    graph_assets = materialize_graphs(graph_assets, request)
-    graph_count = length(graph_assets)
-    source_table = SourceTable(
-        source_idx = [1],
-        source_path = [source_path],
-        collection_count = [1],
-        graph_count = [graph_count],
-    )
-    collection_table = CollectionTable(
-        collection_idx = [1],
-        source_idx = [1],
-        collection_label = [nothing],
-        graph_count = [graph_count],
-    )
-    graph_table = GraphTable(
-        index = [graph_asset.index for graph_asset in graph_assets],
-        source_idx = [graph_asset.source_idx for graph_asset in graph_assets],
-        collection_idx = [graph_asset.collection_idx for graph_asset in graph_assets],
-        collection_graph_idx = [graph_asset.collection_graph_idx for graph_asset in graph_assets],
-        collection_label = [graph_asset.collection_label for graph_asset in graph_assets],
-        graph_label = [graph_asset.graph_label for graph_asset in graph_assets],
-        node_count = [lineagetable_nrows(graph_asset.node_table) for graph_asset in graph_assets],
-        edge_count = [lineagetable_nrows(graph_asset.edge_table) for graph_asset in graph_assets],
-    )
-    graphs = GraphAssetIterator(graph_assets)
-    return LineageGraphStore(
-        source_table,
-        collection_table,
-        graph_table,
-        graphs,
-    )
+    return build_store_from_graph_assets(graph_assets, source_path, request)
 end
 
 function parse_alife_source(
@@ -440,14 +410,45 @@ one of `ancestor_list` or `ancestor_id`. Root entries are identified by
 `id`. All other columns are retained as node annotations.
 """
 function load_alife_table(
+        table;
+        source_path::Union{Nothing, AbstractString} = nothing,
+    )::LineageGraphStore
+    ensure_alife_table_input(table)
+    return build_alife_store_from_table(
+        table,
+        normalize_source_path(source_path),
+        TablesOnlyLoadRequest(),
+    )
+end
+
+function load_alife_table(
+        table,
+        node_type::Type{NodeT};
+        source_path::Union{Nothing, AbstractString} = nothing,
+    )::LineageGraphStore where {NodeT}
+    ensure_alife_table_input(table)
+    validate_extension_load_target(node_type)
+    return build_alife_store_from_table(
+        table,
+        normalize_source_path(source_path),
+        NodeTypeLoadRequest(node_type),
+    )
+end
+
+function load_alife_table(
         table,
         args...;
         builder = nothing,
         source_path::Union{Nothing, AbstractString} = nothing,
     )::LineageGraphStore
-    Tables.istable(typeof(table)) || throw(ArgumentError("`load_alife_table` requires a Tables.jl-compatible input, but received `$(typeof(table))`. Pass a `NamedTuple` of vectors, a `DataFrame`, or any other value satisfying the Tables.jl interface."))
+    ensure_alife_table_input(table)
     request = build_load_request(args, builder)
     return build_alife_store_from_table(table, normalize_source_path(source_path), request)
+end
+
+function ensure_alife_table_input(table)::Nothing
+    Tables.istable(typeof(table)) || throw(ArgumentError("`load_alife_table` requires a Tables.jl-compatible input, but received `$(typeof(table))`. Pass a `NamedTuple` of vectors, a `DataFrame`, or any other value satisfying the Tables.jl interface."))
+    return nothing
 end
 
 function parse_alife_table(

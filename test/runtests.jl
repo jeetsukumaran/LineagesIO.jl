@@ -28,6 +28,7 @@ end
     include("core/row_references.jl")
     include("core/annotation_retention.jl")
     include("core/construction_protocol_single_parent.jl")
+    include("core/type_stability_tranche_01.jl")
     include("core/basenode_binding.jl")
     include("core/builder_callback.jl")
     include("core/error_paths.jl")
