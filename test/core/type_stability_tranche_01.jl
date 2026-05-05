@@ -36,38 +36,6 @@ function inferred_return_type(f, argtypes::Type{<:Tuple})
     return only(Base.return_types(f, argtypes))
 end
 
-function inferred_load_alife_table_tables_only_return_type(
-        table,
-        source_path,
-    )
-    kwargs = (; source_path = source_path)
-    return only(
-        Base.return_types(
-            Core.kwcall,
-            Tuple{typeof(kwargs), typeof(LineagesIO.load_alife_table), typeof(table)},
-        ),
-    )
-end
-
-function inferred_load_alife_table_node_type_return_type(
-        table,
-        source_path,
-        ::Type{NodeT},
-    ) where {NodeT}
-    kwargs = (; source_path = source_path)
-    return only(
-        Base.return_types(
-            Core.kwcall,
-            Tuple{
-                typeof(kwargs),
-                typeof(LineagesIO.load_alife_table),
-                typeof(table),
-                Type{NodeT},
-            },
-        ),
-    )
-end
-
 function newick_tranche_01_fixture()
     fixture_path = abspath(joinpath(@__DIR__, "..", "fixtures", "single_rooted_tree.nwk"))
     text = read(fixture_path, String)
@@ -76,7 +44,7 @@ function newick_tranche_01_fixture()
         LineagesIO.build_graph_asset(basenode, graph_index, fixture_path)
             for (graph_index, basenode) in enumerate(basenodes)
     ]
-    return text, fixture_path, graph_assets
+    return text, fixture_path, basenodes, graph_assets
 end
 
 function alife_text_tranche_01_fixture()
@@ -89,7 +57,7 @@ function alife_text_tranche_01_fixture()
         LineagesIO.build_alife_graph_asset(component, graph_index, fixture_path, annotation_names)
             for (graph_index, component) in enumerate(components)
     ]
-    return text, fixture_path, graph_assets
+    return text, fixture_path, header, components, annotation_names, graph_assets
 end
 
 function alife_table_tranche_01_fixture()
@@ -106,11 +74,11 @@ function alife_table_tranche_01_fixture()
         LineagesIO.build_alife_graph_asset(component, graph_index, source_path, annotation_names)
             for (graph_index, component) in enumerate(components)
     ]
-    return table, source_path, graph_assets
+    return table, source_path, header, components, annotation_names, graph_assets
 end
 
 @testset "Type-stability tranche 01 legacy-owner regression shape" begin
-    _, fixture_path, graph_assets = newick_tranche_01_fixture()
+    _, fixture_path, _, graph_assets = newick_tranche_01_fixture()
     request = LineagesIO.NodeTypeLoadRequest(Tranche01TestNode)
     surface = LineagesIO.Tranche01SingleParentNodeTypeSurface(request)
 
@@ -151,127 +119,86 @@ end
     @test selected_method.module === LineagesIO
 end
 
-@testset "Type-stability tranche 01 public Newick tables-only inference" begin
-    text, fixture_path, graph_assets = newick_tranche_01_fixture()
-    surface = LineagesIO.Tranche01TablesOnlySurface()
-
-    typed_store_return_type = inferred_return_type(
-        LineagesIO.build_tranche_01_store,
-        Tuple{typeof(graph_assets), typeof(fixture_path), typeof(surface)},
+@testset "Type-stability tranche 01 exact asset-builder inference" begin
+    _, fixture_path, basenodes, _ = newick_tranche_01_fixture()
+    basenode = first(basenodes)
+    newick_asset_return_type = inferred_return_type(
+        LineagesIO.build_graph_asset,
+        Tuple{typeof(basenode), Int, typeof(fixture_path)},
     )
-    public_return_type = inferred_return_type(
-        LineagesIO.build_newick_store,
-        Tuple{typeof(text), typeof(fixture_path)},
-    )
-    public_store = LineagesIO.build_newick_store(text, fixture_path)
+    newick_asset = Test.@inferred LineagesIO.build_graph_asset(basenode, 1, fixture_path)
 
-    @test typed_store_return_type <: public_return_type
-    @test typeof(public_store) <: public_return_type
-    @test first(public_store.graphs).graph === nothing
-    @test first(public_store.graphs).basenode === nothing
+    _, table_source_path, _, components, annotation_names, _ = alife_table_tranche_01_fixture()
+    component = first(components)
+    alife_asset_return_type = inferred_return_type(
+        LineagesIO.build_alife_graph_asset,
+        Tuple{typeof(component), Int, typeof(table_source_path), typeof(annotation_names)},
+    )
+    alife_asset = Test.@inferred LineagesIO.build_alife_graph_asset(
+        component,
+        1,
+        table_source_path,
+        annotation_names,
+    )
+
+    @test !(newick_asset_return_type isa UnionAll)
+    @test !(alife_asset_return_type isa UnionAll)
+    @test newick_asset_return_type === typeof(newick_asset)
+    @test alife_asset_return_type === typeof(alife_asset)
+    @test newick_asset.node_table isa LineagesIO.NodeTable
+    @test newick_asset.edge_table isa LineagesIO.EdgeTable
+    @test alife_asset.node_table isa LineagesIO.NodeTable
+    @test alife_asset.edge_table isa LineagesIO.EdgeTable
 end
 
-@testset "Type-stability tranche 01 public Newick NodeType inference" begin
-    text, fixture_path, graph_assets = newick_tranche_01_fixture()
+@testset "Type-stability tranche 01 exact public Newick inference" begin
+    text, fixture_path, _, _ = newick_tranche_01_fixture()
     request = LineagesIO.NodeTypeLoadRequest(Tranche01TestNode)
-    surface = LineagesIO.Tranche01SingleParentNodeTypeSurface(request)
 
-    typed_store_return_type = inferred_return_type(
-        LineagesIO.build_tranche_01_store,
-        Tuple{typeof(graph_assets), typeof(fixture_path), typeof(surface)},
-    )
-    legacy_store_return_type = inferred_return_type(
-        LineagesIO.build_legacy_store_from_graph_assets,
-        Tuple{typeof(graph_assets), typeof(fixture_path), typeof(request)},
-    )
-    public_return_type = inferred_return_type(
-        LineagesIO.build_newick_store,
-        Tuple{typeof(text), typeof(fixture_path), typeof(request)},
-    )
-    public_store = LineagesIO.build_newick_store(text, fixture_path, request)
-    asset = first(public_store.graphs)
+    tables_only_store = Test.@inferred LineagesIO.build_newick_store(text, fixture_path)
+    tables_only_asset = first(tables_only_store.graphs)
+    node_store = Test.@inferred LineagesIO.build_newick_store(text, fixture_path, request)
+    node_asset = first(node_store.graphs)
 
-    @test typed_store_return_type <: public_return_type
-    @test public_return_type != legacy_store_return_type
-    @test typeof(public_store) <: public_return_type
-    @test asset.graph === nothing
-    @test asset.basenode isa Tranche01TestNode
-    @test length(asset.basenode.child_collection) == 2
+    @test tables_only_asset.graph === nothing
+    @test tables_only_asset.basenode === nothing
+    @test node_asset.graph === nothing
+    @test node_asset.basenode isa Tranche01TestNode
+    @test length(node_asset.basenode.child_collection) == 2
 end
 
-@testset "Type-stability tranche 01 public alife text inference" begin
-    text, fixture_path, text_graph_assets = alife_text_tranche_01_fixture()
-    tables_surface = LineagesIO.Tranche01TablesOnlySurface()
-    node_request = LineagesIO.NodeTypeLoadRequest(Tranche01TestNode)
-    node_surface = LineagesIO.Tranche01SingleParentNodeTypeSurface(node_request)
+@testset "Type-stability tranche 01 exact public alife text inference" begin
+    text, fixture_path, _, _, _, _ = alife_text_tranche_01_fixture()
+    request = LineagesIO.NodeTypeLoadRequest(Tranche01TestNode)
 
-    text_tables_return_type = inferred_return_type(
-        LineagesIO.build_tranche_01_store,
-        Tuple{typeof(text_graph_assets), typeof(fixture_path), typeof(tables_surface)},
-    )
-    public_text_tables_return_type = inferred_return_type(
-        LineagesIO.build_alife_store,
-        Tuple{typeof(text), typeof(fixture_path)},
-    )
-    public_text_tables_store = LineagesIO.build_alife_store(text, fixture_path)
+    tables_only_store = Test.@inferred LineagesIO.build_alife_store(text, fixture_path)
+    tables_only_asset = first(tables_only_store.graphs)
+    node_store = Test.@inferred LineagesIO.build_alife_store(text, fixture_path, request)
+    node_asset = first(node_store.graphs)
 
-    text_node_return_type = inferred_return_type(
-        LineagesIO.build_tranche_01_store,
-        Tuple{typeof(text_graph_assets), typeof(fixture_path), typeof(node_surface)},
-    )
-    text_legacy_return_type = inferred_return_type(
-        LineagesIO.build_legacy_store_from_graph_assets,
-        Tuple{typeof(text_graph_assets), typeof(fixture_path), typeof(node_request)},
-    )
-    public_text_node_return_type = inferred_return_type(
-        LineagesIO.build_alife_store,
-        Tuple{typeof(text), typeof(fixture_path), typeof(node_request)},
-    )
-    public_text_node_store = LineagesIO.build_alife_store(text, fixture_path, node_request)
-
-    @test text_tables_return_type <: public_text_tables_return_type
-    @test typeof(public_text_tables_store) <: public_text_tables_return_type
-    @test text_node_return_type <: public_text_node_return_type
-    @test public_text_node_return_type != text_legacy_return_type
-    @test typeof(public_text_node_store) <: public_text_node_return_type
-    @test first(public_text_node_store.graphs).basenode isa Tranche01TestNode
+    @test tables_only_asset.graph === nothing
+    @test tables_only_asset.basenode === nothing
+    @test node_asset.graph === nothing
+    @test node_asset.basenode isa Tranche01TestNode
 end
 
-@testset "Type-stability tranche 01 public load_alife_table inference" begin
-    table, table_source_path, table_graph_assets = alife_table_tranche_01_fixture()
-    tables_surface = LineagesIO.Tranche01TablesOnlySurface()
-    node_request = LineagesIO.NodeTypeLoadRequest(Tranche01TestNode)
-    node_surface = LineagesIO.Tranche01SingleParentNodeTypeSurface(node_request)
+@testset "Type-stability tranche 01 exact public load_alife_table inference" begin
+    table, source_path, _, _, _, _ = alife_table_tranche_01_fixture()
 
-    table_tables_return_type = inferred_return_type(
-        LineagesIO.build_tranche_01_store,
-        Tuple{typeof(table_graph_assets), typeof(table_source_path), typeof(tables_surface)},
+    tables_only_store = Test.@inferred LineagesIO.load_alife_table(
+        table;
+        source_path = source_path,
     )
-    public_table_tables_return_type = inferred_load_alife_table_tables_only_return_type(
+    tables_only_asset = first(tables_only_store.graphs)
+    node_store = Test.@inferred LineagesIO.load_alife_table(
         table,
-        table_source_path,
+        Tranche01TestNode;
+        source_path = source_path,
     )
-    public_table_tables_store = LineagesIO.load_alife_table(table; source_path = table_source_path)
+    node_asset = first(node_store.graphs)
 
-    table_node_return_type = inferred_return_type(
-        LineagesIO.build_tranche_01_store,
-        Tuple{typeof(table_graph_assets), typeof(table_source_path), typeof(node_surface)},
-    )
-    table_legacy_return_type = inferred_return_type(
-        LineagesIO.build_legacy_store_from_graph_assets,
-        Tuple{typeof(table_graph_assets), typeof(table_source_path), typeof(node_request)},
-    )
-    public_table_node_return_type = inferred_load_alife_table_node_type_return_type(
-        table,
-        table_source_path,
-        Tranche01TestNode,
-    )
-    public_table_node_store = LineagesIO.load_alife_table(table, Tranche01TestNode; source_path = table_source_path)
-
-    @test table_tables_return_type <: public_table_tables_return_type
-    @test typeof(public_table_tables_store) <: public_table_tables_return_type
-    @test table_node_return_type <: public_table_node_return_type
-    @test public_table_node_return_type != table_legacy_return_type
-    @test typeof(public_table_node_store) <: public_table_node_return_type
-    @test first(public_table_node_store.graphs).basenode isa Tranche01TestNode
+    @test tables_only_asset.graph === nothing
+    @test tables_only_asset.basenode === nothing
+    @test node_asset.graph === nothing
+    @test node_asset.basenode isa Tranche01TestNode
 end

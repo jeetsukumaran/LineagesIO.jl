@@ -188,9 +188,7 @@ function build_legacy_node_type_store_from_graph_assets(
         request::NodeTypeLoadRequest{NodeT},
     )::LineageGraphStore where {
         NodeT,
-        NodeTableT <: NodeTable,
-        EdgeTableT <: EdgeTable,
-        GraphAssetT <: LineageGraphAsset{Nothing, Nothing, NodeTableT, EdgeTableT},
+        GraphAssetT <: LineageGraphAsset{Nothing, Nothing, NodeTable, EdgeTable},
         GraphAssetVectorT <: AbstractVector{GraphAssetT},
     }
     materialized_graph_assets = materialize_legacy_node_type_graph_assets(graph_assets, request)
@@ -210,16 +208,14 @@ end
 function materialize_tranche_01_graph_assets(
         graph_assets::GraphAssetVectorT,
         surface::Tranche01SingleParentNodeTypeSurface{NodeT},
-    )::Vector{LineageGraphAsset{Nothing, NodeT, NodeTableT, EdgeTableT}} where {
+    )::Vector{LineageGraphAsset{Nothing, NodeT, NodeTable, EdgeTable}} where {
         NodeT,
-        NodeTableT <: NodeTable,
-        EdgeTableT <: EdgeTable,
-        GraphAssetT <: LineageGraphAsset{Nothing, Nothing, NodeTableT, EdgeTableT},
+        GraphAssetT <: LineageGraphAsset{Nothing, Nothing, NodeTable, EdgeTable},
         GraphAssetVectorT <: AbstractVector{GraphAssetT},
     }
     graph_assets_require_multi_parent(graph_assets) && throw(ArgumentError("The tranche-01 typed single-parent owner cannot materialize multi-parent authoritative graph assets. Route this request through the legacy path until tranche 2 replaces the multi-parent scheduler owner."))
     validate_materialization_request(graph_assets, surface.request)
-    materialized_graph_assets = LineageGraphAsset{Nothing, NodeT, NodeTableT, EdgeTableT}[]
+    materialized_graph_assets = LineageGraphAsset{Nothing, NodeT, NodeTable, EdgeTable}[]
     for graph_asset in graph_assets
         push!(materialized_graph_assets, materialize_graph(graph_asset, surface.request))
     end
@@ -229,15 +225,13 @@ end
 function materialize_legacy_node_type_graph_assets(
         graph_assets::GraphAssetVectorT,
         request::NodeTypeLoadRequest{NodeT},
-    )::Vector{LineageGraphAsset{Nothing, NodeT, NodeTableT, EdgeTableT}} where {
+    )::Vector{LineageGraphAsset{Nothing, NodeT, NodeTable, EdgeTable}} where {
         NodeT,
-        NodeTableT <: NodeTable,
-        EdgeTableT <: EdgeTable,
-        GraphAssetT <: LineageGraphAsset{Nothing, Nothing, NodeTableT, EdgeTableT},
+        GraphAssetT <: LineageGraphAsset{Nothing, Nothing, NodeTable, EdgeTable},
         GraphAssetVectorT <: AbstractVector{GraphAssetT},
     }
     validate_materialization_request(graph_assets, request)
-    materialized_graph_assets = LineageGraphAsset{Nothing, NodeT, NodeTableT, EdgeTableT}[]
+    materialized_graph_assets = LineageGraphAsset{Nothing, NodeT, NodeTable, EdgeTable}[]
     for graph_asset in graph_assets
         push!(materialized_graph_assets, materialize_graph(graph_asset, request))
     end
@@ -441,12 +435,9 @@ function build_multi_parent_protocol_sample(
 end
 
 function materialize_graph(
-        graph_asset::LineageGraphAsset{Nothing, Nothing, NodeTableT, EdgeTableT},
+        graph_asset::LineageGraphAsset{Nothing, Nothing, NodeTable, EdgeTable},
         request::AbstractLoadRequest,
-    ) where {
-        NodeTableT <: NodeTable,
-        EdgeTableT <: EdgeTable,
-    }
+    )
     graph_val, basenode_val = materialize_graph_basenode(graph_asset, request)
     return LineageGraphAsset(
         graph_asset.index,
@@ -464,12 +455,9 @@ function materialize_graph(
 end
 
 function materialize_graph_basenode(
-        graph_asset::LineageGraphAsset{Nothing, Nothing, NodeTableT, EdgeTableT},
+        graph_asset::LineageGraphAsset{Nothing, Nothing, NodeTable, EdgeTable},
         request::AbstractLoadRequest,
-    ) where {
-        NodeTableT <: NodeTable,
-        EdgeTableT <: EdgeTable,
-    }
+    )
     node_table = graph_asset.node_table
     edge_table = graph_asset.edge_table
     node_count = lineagetable_nrows(node_table)

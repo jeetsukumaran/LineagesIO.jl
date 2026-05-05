@@ -49,21 +49,18 @@ struct LineageGraphStore{
 end
 
 function LineageGraphStore(
-        source_table::SourceTableT,
-        collection_table::CollectionTableT,
-        graph_table::GraphTableT,
+        source_table::SourceTable,
+        collection_table::CollectionTable,
+        graph_table::GraphTable,
         graphs::GraphAssetIterator{GraphAssetVectorT},
     ) where {
-        SourceTableT <: SourceTable,
-        CollectionTableT <: CollectionTable,
-        GraphTableT <: GraphTable,
         GraphAssetVectorT <: AbstractVector,
     }
     graph_asset_type = eltype(GraphAssetVectorT)
     graph_type = fieldtype(graph_asset_type, 9)
     basenode_type = fieldtype(graph_asset_type, 10)
     graph_iterator_type = typeof(graphs)
-    return LineageGraphStore{graph_type, basenode_type, SourceTableT, CollectionTableT, GraphTableT, graph_iterator_type}(
+    return LineageGraphStore{graph_type, basenode_type, SourceTable, CollectionTable, GraphTable, graph_iterator_type}(
         source_table,
         collection_table,
         graph_table,
