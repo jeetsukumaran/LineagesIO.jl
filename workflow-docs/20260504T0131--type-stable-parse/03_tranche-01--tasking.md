@@ -3,6 +3,24 @@
 Parent tranche: Tranche 1
 Parent PRD: `01_prd.md`
 
+## Supplemental remediation tasking
+
+This file remains the controlling tasking for the original tranche-01
+implementation scope.
+
+If the work targets the already-committed tranche-01 fulfillment state after
+architecture review findings were reported, read
+`workflow-docs/20260504T0131--type-stable-parse/04_tranche-01--review-remediation-tasking.md`
+line by line and comply with it as a mandatory supplemental tasking authority.
+
+That supplemental file closes 3 post-review findings that this original file
+did not encode:
+
+- the public `load_alife_table` builder-surface regression
+- the tranche-01 core owner-selection leak that names concrete extension
+  targets in core
+- the weak public inference proofs that only compare runtime store types
+
 ## Settled user decisions and environment baseline
 
 - This tasking is repo-scoped only. Do not look for controlling workspace-level style or vocabulary files outside this repo.
