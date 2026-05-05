@@ -13,6 +13,12 @@ architecture review findings were reported, read
 `workflow-docs/20260504T0131--type-stable-parse/04_tranche-01--review-remediation-tasking.md`
 line by line and comply with it as a mandatory supplemental tasking authority.
 
+If the work targets the still-open exact public package-owned inference blocker
+after that review-remediation pass, also read
+`workflow-docs/20260504T0131--type-stable-parse/05_tranche-01--public-entrypoint-inference-rearchitecture-tasking.md`
+line by line and comply with it as an additional mandatory supplemental
+tasking authority.
+
 That supplemental file closes 3 post-review findings that this original file
 did not encode:
 
@@ -20,6 +26,13 @@ did not encode:
 - the tranche-01 core owner-selection leak that names concrete extension
   targets in core
 - the weak public inference proofs that only compare runtime store types
+
+The second supplemental file closes 1 additional post-remediation diagnosis
+error that both earlier files still left open:
+
+- exact public tranche-01 parse/load inference cannot be achieved honestly
+  while authoritative table identity still depends on runtime schema-derived
+  type parameters
 
 ## Settled user decisions and environment baseline
 

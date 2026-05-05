@@ -4,6 +4,24 @@ Parent tranche: Tranche 1
 Parent PRD: `01_prd.md`
 Parent tranche tasking: `03_tranche-01--tasking.md`
 
+## Supplemental public-inference rearchitecture tasking
+
+This file remains the controlling tasking for the first 3 tranche-01
+review-remediation findings.
+
+If the work targets the still-open public package-owned inference blocker after
+those 3 findings were remediated, read
+`workflow-docs/20260504T0131--type-stable-parse/05_tranche-01--public-entrypoint-inference-rearchitecture-tasking.md`
+line by line and comply with it as a mandatory supplemental tasking
+authority.
+
+That newer supplemental file closes the remaining tasking misdiagnosis that
+this file still left open:
+
+- exact public tranche-01 parse/load inference cannot be recovered honestly
+  while authoritative table identity still depends on runtime schema-derived
+  type parameters
+
 ## Settled user decisions and environment baseline
 
 - This tasking is repo-scoped only. Do not look for controlling workspace-level style or vocabulary files outside this repo.
