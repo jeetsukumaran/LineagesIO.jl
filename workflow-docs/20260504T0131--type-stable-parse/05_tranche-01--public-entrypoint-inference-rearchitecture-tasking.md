@@ -25,6 +25,12 @@ Parent review-remediation tasking: `04_tranche-01--review-remediation-tasking.md
   - do not change public argument signatures
   - do not change `FileIO` compatibility semantics
   - do not add a new public typed API in this pass
+- External API here includes more than exported function names. It also includes:
+  - exported type identities
+  - exported type parameterization and arity
+  - exported constructor acceptance behavior
+  - constructor round-tripping behavior for exported companion tables
+- If exact public tranche-01 inference cannot be achieved without changing any of those public type-surface elements, implementation must stop and raise that blocker explicitly. It must not "solve" the tranche by silently changing exported types in place.
 - Preserve all of the following:
   - authoritative table ownership
   - retained annotation access
@@ -83,6 +89,8 @@ What was wrong in the prior tasking:
 - The prior remediation correctly identified that the public proof was weak.
 - The prior remediation incorrectly assumed that exact public-entrypoint inference could be recovered without redesigning the authoritative table and store type boundary.
 - That assumption was false.
+- This supplemental tasking then overcorrected by describing one specific repair shape that replaces exported parametric table types with concrete ones in place.
+- That repair shape is not valid under the fixed external API boundary for this tranche, because exported type identity and constructor behavior are also part of the public surface.
 
 What the code now proves:
 
@@ -114,6 +122,14 @@ The remaining blocker is:
 The correct fix is therefore:
 
 - redesign the authoritative table and returned store typing so package-owned public tranche-01 parse/load surfaces return exact concrete store types whose identity does not depend on runtime annotation-name tuples or runtime table schema tuples
+
+What this supplemental tasking no longer authorizes:
+
+- replacing exported parametric table types with concrete exported table types in place
+- hardwiring exported `LineageGraphStore` type parameters to a new concrete table shape if that changes the public type surface
+- silently narrowing exported companion-table `NamedTuple` constructors so they drop previously accepted columns
+
+If the only honest technical path still appears to require one of those moves, stop and raise a blocker for replanning instead of implementing it.
 
 ## Required revalidation before implementation
 
@@ -149,6 +165,7 @@ The owners and invariants that must remain after this pass:
 - retained annotation values remain `Union{Nothing, String}`
 - public row-reference semantics remain intact
 - package-owned public tranche-01 parse/load surfaces infer exactly under `Test.@inferred`
+- exported type identities, parameterization, and accepted constructor behavior remain externally compatible
 
 The owners or behaviors that must no longer exist after this pass:
 
@@ -172,6 +189,8 @@ Green-state rule for this pass:
 
 - Do not lower the success condition from exact public-entrypoint inference to helper-only inference.
 - Do not treat stronger tests as the fix while leaving the data-dependent type boundary unchanged.
+- Do not change exported type identities, exported type parameterization, exported type arity, or exported constructor acceptance behavior in this pass.
+- Do not change public companion-table `NamedTuple` constructors so they silently discard previously accepted columns.
 - Do not preserve runtime-schema-dependent table identity by moving the same `Tables.Schema` and `NamedTuple` parameterization into a different wrapper or helper.
 - Do not fix the problem by hardcoding fixture annotation names, fixture column sets, or format-specific schema tuples.
 - Do not erase the problem by stuffing table payloads into `Any`, `Vector{Any}`, `Dict{Symbol, Any}`, or similarly untyped storage.
@@ -187,6 +206,7 @@ Green-state rule for this pass:
 - `struct GraphTable{SchemaT <: Tables.Schema, ColumnsT <: NamedTuple} ...`
 - `struct NodeTable{SchemaT <: Tables.Schema, ColumnsT <: NamedTuple} ...`
 - `struct EdgeTable{SchemaT <: Tables.Schema, ColumnsT <: NamedTuple} ...`
+- replacing those exported parametric types with new concrete exported types in place
 - `LineageGraphAsset{Nothing, Nothing, NodeTableT, EdgeTableT} where {NodeTableT, EdgeTableT}` as the inferred return shape of public asset builders
 - `LineageGraphStore{..., GraphTableT, GraphAssetIterator{GraphAssetVectorT}} where ...` as the inferred return shape of public tranche-01 parse/load entrypoints
 - tests that prove only `typed_return_type <: public_return_type`
@@ -202,6 +222,7 @@ The following checks must fail the current known bad implementation or a fake-fi
 - direct proof that `Base.return_types(LineagesIO.build_graph_asset, ...)` is still a `UnionAll`/existential shape on the bad implementation
 - direct proof that `Base.return_types(LineagesIO.build_alife_graph_asset, ...)` is still a `UnionAll`/existential shape on the bad implementation
 - direct proof that merely comparing helper inferred types to public inferred types with `<:` or runtime equality would still pass the bad implementation
+- a direct compatibility check that fails if exported table/store type identities or constructor acceptance changed
 
 The following are required positive proofs after the fix:
 
@@ -213,6 +234,7 @@ The following are required positive proofs after the fix:
 - `Test.@inferred LineagesIO.build_alife_store(text, path, NodeTypeLoadRequest(NodeT))`
 - `Test.@inferred LineagesIO.load_alife_table(table; source_path = ...)`
 - `Test.@inferred LineagesIO.load_alife_table(table, NodeT; source_path = ...)`
+- exported table/store type identities, parameterization, and constructor acceptance behavior remain compatible
 - existing builder regression tests remain green
 - existing extension activation tests remain green
 - existing core behavior tests remain green
@@ -257,33 +279,34 @@ The following are not acceptable as the only proof:
 - confirm `build_store_from_graph_assets` already infers exactly once graph assets are concrete
 
 ### 2. Replace schema-parametric authoritative table types with concrete table owners
+### 2. Revalidate whether exact public inference is compatible with preserving the exported type surface
 
-**Type**: WRITE
-**Output**: concrete authoritative table types whose public identity no longer depends on runtime schema tuples or runtime `NamedTuple` column-layout types
+**Type**: REVIEW
+**Output**: a written compatibility decision baseline stating either (a) the exact public inference goal is still achievable without changing exported type identities, parameterization, or constructor acceptance, or (b) it is not and the tranche must stop for replanning
 **Depends on**: 1
-**Positive contract**: in `src/tables.jl`, replace the current schema-parametric `SourceTable`, `CollectionTable`, `GraphTable`, `NodeTable`, and `EdgeTable` definitions with concrete structs; implement the summary tables with dedicated typed vector fields for their fixed structural columns; add one non-exported concrete `AnnotationColumnStore` helper in `src/tables.jl` with exact fields `names::Vector{Symbol}`, `columns::Vector{Vector{OptionalString}}`, and `index_by_name::Dict{Symbol, Int}`; make `NodeTable` and `EdgeTable` store their structural vectors directly plus one `AnnotationColumnStore`; keep the existing constructor call shapes and validation behavior; implement `Tables.schema`, `Tables.columnnames`, and `Tables.getcolumn` against the new concrete field layout so runtime schema is computed from stored columns rather than encoded in the table type
-**Negative contract**: do not reintroduce runtime schema identity through a different table type parameter; do not use `NamedTuple` or `Tables.Schema` type parameters in the new table definitions; do not store annotation payloads in `Any`-typed containers; do not change annotation value contracts; do not change public constructor names or keywords
+**Positive contract**: inspect the exported table/store type surface, exported companion-table constructor behavior, and the remaining public typed-boundary blocker together; determine whether the exact public `@inferred` goal can still be met without changing exported type identities, exported type parameterization, exported type arity, or exported constructor acceptance behavior; if it can, record the compatibility-preserving owner boundary that must be repaired next; if it cannot, stop and raise that blocker explicitly rather than implementing a public break
+**Negative contract**: do not implement a concrete exported table rewrite in this task; do not silently reclassify exported type-surface breakage as internal-only; do not weaken the exact public inference goal without explicit user approval
 **Files**:
-- `src/tables.jl`
+- read `src/tables.jl`
+- read `src/views.jl`
+- read `src/construction.jl`
+- read `test/core/companion_tables.jl`
+- read `test/core/type_stability_tranche_01.jl`
 **Out of scope**:
-- `src/construction.jl`
-- `src/views.jl`
-- `src/newick_format.jl`
-- `src/alife_format.jl`
-- extension files
-- docs files
+- source edits except for comment-only breadcrumbing if absolutely necessary
+- docs edits
+- dependency changes
 **Verification**:
-- confirm by inspection that all 5 table types are now concrete and non-parametric
-- confirm by direct check that `Tables.columnnames`, `Tables.getcolumn(table, i)`, and `Tables.getcolumn(table, nm)` still work for summary, node, and edge tables
-- run `julia --project=test test/runtests.jl`
+- confirm whether exported type-surface compatibility and exact public `@inferred` can both still hold
+- if not, produce a blocker rather than a code patch
 
 ### 3. Migrate graph assets, stores, and tranche-01 source builders to the new concrete table boundary
 
 **Type**: MIGRATE
 **Output**: package-owned public tranche-01 parse/load surfaces now build and return stores whose type identity no longer depends on runtime table schema types
 **Depends on**: 2
-**Positive contract**: in `src/views.jl`, keep the exported type names and current constructor call shapes, but update `LineageGraphAsset`, `GraphAssetIterator`, `LineageGraphStore`, and `build_lineage_graph_store` so the authoritative table portion of the returned public type uses the concrete `SourceTable`, `CollectionTable`, `GraphTable`, `NodeTable`, and `EdgeTable` owners from task 2 rather than runtime-schema-derived table types; preserve current type arity by keeping the existing public `LineageGraphAsset` and `LineageGraphStore` type parameter counts, with the table-typed slots now fixed to the concrete table owners instead of data-dependent table types; in `src/construction.jl`, update tranche-01 helper signatures and temporary vector construction to target the new concrete asset shape rather than `NodeTableT`/`EdgeTableT` existential parameters; in `src/newick_format.jl` and `src/alife_format.jl`, keep the current parsing and validation behavior but make `build_graph_asset` and `build_alife_graph_asset` return one exact concrete asset type through the new table boundary
-**Negative contract**: do not reduce the success condition to helper-only inference; do not reintroduce runtime schema identity through a different asset or store type parameter; do not move structural or annotation payloads into `Any` fields; do not change public function names, argument shapes, builder behavior, or typed-owner routing; do not change extension behavior beyond strictly mechanical signature updates required to keep extension code compiling against the new asset/table types
+**Positive contract**: execute this task only if task 2 explicitly established a compatibility-preserving owner repair that keeps exported type identities, exported parameterization, exported arity, and exported constructor acceptance behavior unchanged; implement that approved repair in `src/views.jl`, `src/construction.jl`, `src/newick_format.jl`, and `src/alife_format.jl` so the remaining public typed-boundary blocker is removed without changing the exported type surface
+**Negative contract**: do not execute this task at all if task 2 concluded that exact public inference still requires a public exported type-surface break; do not reduce the success condition to helper-only inference; do not reintroduce runtime schema identity through a different asset or store type parameter; do not move structural or annotation payloads into `Any` fields; do not change public function names, argument shapes, builder behavior, typed-owner routing, exported type identities, exported type parameterization, exported type arity, or exported constructor acceptance behavior; do not change extension behavior beyond strictly mechanical signature updates required by a compatibility-preserving internal repair
 **Files**:
 - `src/views.jl`
 - `src/construction.jl`
@@ -309,8 +332,8 @@ The following are not acceptable as the only proof:
 **Type**: TEST
 **Output**: direct exact public-entrypoint inference proof for all tranche-01 package-owned parse/load surfaces, plus anti-regression checks for the old existential asset-builder shape
 **Depends on**: 3
-**Positive contract**: in `test/core/type_stability_tranche_01.jl`, keep the useful legacy-owner regression checks and shared-owner routing checks, but replace the public subtype/runtime-equality proof pattern with direct `Test.@inferred` checks on the package-owned public tranche-01 surfaces themselves; add exact public `@inferred` checks for the 6 public surfaces listed in the settled success condition; add direct `@inferred` checks for `build_graph_asset` and `build_alife_graph_asset`; add explicit anti-regression checks proving the inferred return type for those 2 asset builders is not a `UnionAll`; keep the existing `load_alife_table` builder regression tests and extension owner-location tests green
-**Negative contract**: do not keep `typed_return_type <: public_return_type`, `typeof(public_store) <: public_return_type`, or `public_return_type != legacy_store_return_type` as the primary proof; do not move proof into comments or source-text assertions; do not reclassify helper-only proof as public proof; do not broaden this test file into multi-parent or `FileIO` guarantees
+**Positive contract**: in `test/core/type_stability_tranche_01.jl`, keep the useful legacy-owner regression checks and shared-owner routing checks, but replace the public subtype/runtime-equality proof pattern with direct `Test.@inferred` checks on the package-owned public tranche-01 surfaces themselves; add exact public `@inferred` checks for the 6 public surfaces listed in the settled success condition; add direct `@inferred` checks for `build_graph_asset` and `build_alife_graph_asset`; add explicit anti-regression checks proving the inferred return type for those 2 asset builders is not a `UnionAll`; add compatibility checks showing exported type identities, exported type parameterization, and companion-table constructor acceptance are still intact; keep the existing `load_alife_table` builder regression tests and extension owner-location tests green
+**Negative contract**: do not keep `typed_return_type <: public_return_type`, `typeof(public_store) <: public_return_type`, or `public_return_type != legacy_store_return_type` as the primary proof; do not move proof into comments or source-text assertions; do not reclassify helper-only proof as public proof; do not broaden this test file into multi-parent or `FileIO` guarantees; do not accept green exact-inference tests if exported type-surface compatibility was broken to obtain them
 **Files**:
 - `test/core/type_stability_tranche_01.jl`
 - `test/core/alife_format.jl` only if a narrow assertion adjustment is required by the exact proof rewrite
@@ -324,6 +347,7 @@ The following are not acceptable as the only proof:
 - confirm `Test.@inferred` passes for all 6 package-owned public tranche-01 surfaces
 - confirm `Test.@inferred` passes for `build_graph_asset` and `build_alife_graph_asset`
 - confirm the anti-regression checks fail the old existential asset-builder return shape
+- confirm the compatibility checks fail if exported table/store type identities or constructor acceptance changed
 - run `julia --project=test test/runtests.jl`
 
 ### 5. Audit final boundary honesty and freeze tranche 1 again
