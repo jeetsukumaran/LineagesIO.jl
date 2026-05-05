@@ -24,4 +24,12 @@ using PhyloNetworks
     @test asset.graph isa PhyloNetworks.HybridNetwork
     @test asset.basenode === asset.graph.node[asset.graph.rooti]
     @test Tables.getcolumn(asset.node_table, :label) == ["Root", "Inner", "A", "", "C"]
+
+    request = LineagesIO.NodeTypeLoadRequest(PhyloNetworks.HybridNetwork)
+    selected_method = which(
+        LineagesIO.request_uses_tranche_01_single_parent_owner,
+        Tuple{typeof(request)},
+    )
+    @test !LineagesIO.request_uses_tranche_01_single_parent_owner(request)
+    @test selected_method.module === extension
 end

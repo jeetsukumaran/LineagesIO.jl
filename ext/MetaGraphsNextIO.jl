@@ -267,6 +267,12 @@ end
 # Protocol: validate_extension_load_target
 # ---------------------------------------------------------------------------
 
+function LineagesIO.request_uses_tranche_01_single_parent_owner(
+    ::LineagesIO.NodeTypeLoadRequest{<:MetaGraph},
+)::Bool
+    return false
+end
+
 function LineagesIO.validate_extension_load_target(::Type{<:MetaGraph})::Nothing
     return nothing
 end

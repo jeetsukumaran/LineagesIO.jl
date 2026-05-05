@@ -191,6 +191,12 @@ function validate_phylonetworks_graph_asset(
     return nothing
 end
 
+function LineagesIO.request_uses_tranche_01_single_parent_owner(
+    ::LineagesIO.NodeTypeLoadRequest{PhyloNetworks.HybridNetwork},
+)::Bool
+    return false
+end
+
 function LineagesIO.validate_extension_load_target(
     node_type::Type{TargetT},
 )::Nothing where {TargetT <: PhyloNetworks.HybridNetwork}

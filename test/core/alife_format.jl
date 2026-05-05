@@ -298,6 +298,37 @@ end
     @test Tables.getcolumn(asset.edge_table, :dst_nodekey) == [2, 3, 4, 4]
 end
 
+@testset "Alife standard load_alife_table — builder surfaces" begin
+    table = (
+        id = [0, 1, 2, 3],
+        ancestor_list = [Int[], [0], [0], [1]],
+        origin_time = [0.0, 1.0, 1.0, 2.0],
+    )
+    captured_events = Tuple{Any, Int, String}[]
+    builder = function(parent, nodekey, label, edgekey, edgeweight; edgedata, nodedata)
+        push!(captured_events, (parent, Int(nodekey), String(label)))
+        return (; nodekey = Int(nodekey), label = String(label))
+    end
+
+    store = load_alife_table(table; builder = builder, source_path = "synthetic-builder-table")
+    asset = first(store.graphs)
+    @test asset.source_path == "synthetic-builder-table"
+    @test asset.basenode !== nothing
+    @test asset.basenode.label == "0"
+    @test length(captured_events) == 4
+    @test captured_events[1][1] === nothing
+    @test captured_events[1][3] == "0"
+
+    mixed_surface_error = capture_alife_argument_error() do
+        load_alife_table(table, Int; builder = builder)
+    end
+    @test mixed_surface_error isa ArgumentError
+    @test occursin(
+        "Choose either `load(src, NodeT)` or `load(src; builder = fn)`, not both at once.",
+        sprint(showerror, mixed_surface_error),
+    )
+end
+
 @testset "Alife standard load_alife_table — ancestor_id with self-id basenodes" begin
     table = (
         id = [0, 1, 2, 3],

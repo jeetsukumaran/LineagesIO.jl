@@ -33,4 +33,14 @@ using MetaGraphsNext
     @test parameterized_asset.basenode === Symbol(1)
     @test MetaGraphsNext.Graphs.nv(parameterized_asset.graph) == 5
     @test MetaGraphsNext.Graphs.ne(parameterized_asset.graph) == 4
+
+    user_request = LineagesIO.NodeTypeLoadRequest(MetaGraphsNext.MetaGraph)
+    request = LineagesIO.NodeTypeLoadRequest(typeof(asset.graph))
+    selected_method = which(
+        LineagesIO.request_uses_tranche_01_single_parent_owner,
+        Tuple{typeof(request)},
+    )
+    @test !LineagesIO.request_uses_tranche_01_single_parent_owner(user_request)
+    @test !LineagesIO.request_uses_tranche_01_single_parent_owner(request)
+    @test selected_method.module === extension
 end

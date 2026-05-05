@@ -139,7 +139,7 @@ function build_store_from_graph_assets(
         GraphAssetVectorT <: AbstractVector{GraphAssetT},
     }
     request_uses_tranche_01_single_parent_owner(request) || return build_legacy_store_from_graph_assets(graph_assets, source_path, request)
-    graph_assets_require_multi_parent(graph_assets) && return build_legacy_store_from_graph_assets(graph_assets, source_path, request)
+    graph_assets_require_multi_parent(graph_assets) && return build_legacy_node_type_store_from_graph_assets(graph_assets, source_path, request)
     return build_tranche_01_store(
         graph_assets,
         source_path,
@@ -182,6 +182,21 @@ function build_tranche_01_store(
     return build_lineage_graph_store(source_path, materialized_graph_assets)
 end
 
+function build_legacy_node_type_store_from_graph_assets(
+        graph_assets::GraphAssetVectorT,
+        source_path::OptionalString,
+        request::NodeTypeLoadRequest{NodeT},
+    )::LineageGraphStore where {
+        NodeT,
+        NodeTableT <: NodeTable,
+        EdgeTableT <: EdgeTable,
+        GraphAssetT <: LineageGraphAsset{Nothing, Nothing, NodeTableT, EdgeTableT},
+        GraphAssetVectorT <: AbstractVector{GraphAssetT},
+    }
+    materialized_graph_assets = materialize_legacy_node_type_graph_assets(graph_assets, request)
+    return build_lineage_graph_store(source_path, materialized_graph_assets)
+end
+
 function materialize_tranche_01_graph_assets(
         graph_assets::GraphAssetVectorT,
         ::Tranche01TablesOnlySurface,
@@ -211,6 +226,24 @@ function materialize_tranche_01_graph_assets(
     return materialized_graph_assets
 end
 
+function materialize_legacy_node_type_graph_assets(
+        graph_assets::GraphAssetVectorT,
+        request::NodeTypeLoadRequest{NodeT},
+    )::Vector{LineageGraphAsset{Nothing, NodeT, NodeTableT, EdgeTableT}} where {
+        NodeT,
+        NodeTableT <: NodeTable,
+        EdgeTableT <: EdgeTable,
+        GraphAssetT <: LineageGraphAsset{Nothing, Nothing, NodeTableT, EdgeTableT},
+        GraphAssetVectorT <: AbstractVector{GraphAssetT},
+    }
+    validate_materialization_request(graph_assets, request)
+    materialized_graph_assets = LineageGraphAsset{Nothing, NodeT, NodeTableT, EdgeTableT}[]
+    for graph_asset in graph_assets
+        push!(materialized_graph_assets, materialize_graph(graph_asset, request))
+    end
+    return materialized_graph_assets
+end
+
 function graph_assets_require_multi_parent(
         graph_assets::AbstractVector{<:LineageGraphAsset},
     )::Bool
@@ -221,24 +254,9 @@ function graph_assets_require_multi_parent(
 end
 
 function request_uses_tranche_01_single_parent_owner(
-        request::NodeTypeLoadRequest,
+        ::NodeTypeLoadRequest,
     )::Bool
-    return !is_extension_owned_node_type(request.node_type)
-end
-
-function is_extension_owned_node_type(node_type::Type)::Bool
-    metagraphsnext_extension = Base.get_extension(@__MODULE__, :MetaGraphsNextIO)
-    if metagraphsnext_extension !== nothing
-        node_type <: getproperty(metagraphsnext_extension, :MetaGraph) && return true
-    end
-
-    phylonetworks_extension = Base.get_extension(@__MODULE__, :PhyloNetworksIO)
-    if phylonetworks_extension !== nothing
-        phylonetworks_module = getproperty(phylonetworks_extension, :PhyloNetworks)
-        node_type <: getproperty(phylonetworks_module, :HybridNetwork) && return true
-    end
-
-    return false
+    return true
 end
 
 function materialize_graphs(

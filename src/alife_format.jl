@@ -397,6 +397,44 @@ function format_alife_error(source_path::OptionalString, message::AbstractString
     return "Alife standard parse error in $(source_label): $(message)"
 end
 
+function build_load_request(
+        node_type::Type{NodeT},
+        builder,
+    )::NodeTypeLoadRequest{NodeT} where {NodeT}
+    builder === nothing || throw(ArgumentError("Choose either `load(src, NodeT)` or `load(src; builder = fn)`, not both at once."))
+    validate_extension_load_target(node_type)
+    return NodeTypeLoadRequest(node_type)
+end
+
+function build_load_request(
+        basenode::BasenodeT,
+        builder,
+    )::BasenodeLoadRequest{BasenodeT} where {BasenodeT}
+    builder === nothing || throw(ArgumentError("An explicit `builder` callback cannot be combined with a supplied `basenode`; choose one construction ownership model."))
+    return BasenodeLoadRequest(basenode)
+end
+
+function build_alife_table_load_request(
+        builder,
+        args...,
+    )::AbstractLoadRequest
+    return build_load_request(args, builder)
+end
+
+function build_alife_table_load_request(
+        builder,
+        node_type::Type{NodeT},
+    )::NodeTypeLoadRequest{NodeT} where {NodeT}
+    return build_load_request(node_type, builder)
+end
+
+function build_alife_table_load_request(
+        builder,
+        basenode,
+    )::AbstractLoadRequest
+    return build_load_request(basenode, builder)
+end
+
 """
     load_alife_table(table; source_path = nothing) -> LineageGraphStore
     load_alife_table(table, NodeT; source_path = nothing) -> LineageGraphStore
@@ -410,39 +448,13 @@ one of `ancestor_list` or `ancestor_id`. Root entries are identified by
 `id`. All other columns are retained as node annotations.
 """
 function load_alife_table(
-        table;
-        source_path::Union{Nothing, AbstractString} = nothing,
-    )::LineageGraphStore
-    ensure_alife_table_input(table)
-    return build_alife_store_from_table(
-        table,
-        normalize_source_path(source_path),
-        TablesOnlyLoadRequest(),
-    )
-end
-
-function load_alife_table(
-        table,
-        node_type::Type{NodeT};
-        source_path::Union{Nothing, AbstractString} = nothing,
-    )::LineageGraphStore where {NodeT}
-    ensure_alife_table_input(table)
-    validate_extension_load_target(node_type)
-    return build_alife_store_from_table(
-        table,
-        normalize_source_path(source_path),
-        NodeTypeLoadRequest(node_type),
-    )
-end
-
-function load_alife_table(
         table,
         args...;
         builder = nothing,
         source_path::Union{Nothing, AbstractString} = nothing,
     )::LineageGraphStore
     ensure_alife_table_input(table)
-    request = build_load_request(args, builder)
+    request = build_alife_table_load_request(builder, args...)
     return build_alife_store_from_table(table, normalize_source_path(source_path), request)
 end
 
